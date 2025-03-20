@@ -9,31 +9,34 @@ function App() {
   const messagesEndRef = useRef(null);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return; // Prevent sending empty messages or sending while loading
 
-    const userMessage = { text: input, sender: "user" };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setMessages((prevMessages) => [...prevMessages, { text: input, sender: "user" }]);
     setInput(""); // Clear input field
     setLoading(true); // Show typing indicator
 
     try {
-      const response = await axios.post("http://localhost:5000/chat", {
-        message: input,
-      });
+      const response = await axios.post("http://localhost:5000/chat", { message: input }); // Ensure correct backend URL
+      console.log("Full Backend Response:", response.data); // Debugging
 
-      const botMessage = { text: response.data.reply, sender: "bot" };
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
+      const botReply = response.data.response || "No response from AI";
+      setMessages((prevMessages) => [...prevMessages, { text: botReply, sender: "bot" }]);
     } catch (error) {
       console.error("Error fetching response:", error);
-      setMessages((prevMessages) => [...prevMessages, { text: "Failed to get response. Try again!", sender: "bot" }]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { text: "Failed to get response. Try again!", sender: "bot" },
+      ]);
     } finally {
-      setLoading(false); // Hide typing indicator
+      setLoading(false);
     }
   };
 
   // Auto-scroll to latest message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   }, [messages]);
 
   return (
@@ -115,13 +118,14 @@ function App() {
           boxShadow="sm"
           _placeholder={{ color: "gray.500" }}
           color="black"
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()} // Send message on Enter key
+          onKeyDown={(e) => e.key === "Enter" && !loading && sendMessage()} // Prevent sending while loading
+          isDisabled={loading} // Disable input when AI is typing
         />
         <Button
           onClick={sendMessage}
           colorScheme="blue"
           borderRadius="lg"
-          isDisabled={loading}
+          isDisabled={loading} // Disable button when AI is typing
           boxShadow="md"
         >
           Send
