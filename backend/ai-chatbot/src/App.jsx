@@ -9,22 +9,27 @@ function App() {
   const messagesEndRef = useRef(null);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return; // Prevent sending empty messages or sending while loading
+    if (!input.trim() || loading) return; // Prevent empty or duplicate sends
 
-    setMessages((prevMessages) => [...prevMessages, { text: input, sender: "user" }]);
-    setInput(""); // Clear input field
-    setLoading(true); // Show typing indicator
+    const newMessage = { text: input, sender: "user" };
+    setMessages((prev) => [...prev, newMessage]);
+    setInput("");
+    setLoading(true);
 
     try {
-      const response = await axios.post("/chat", { message: input }); // Ensure correct backend URL
-      console.log("Full Backend Response:", response.data); // Debugging
+      const response = await axios.post(
+        import.meta.env.VITE_BACKEND_URL || "/chat",
+        { message: input }
+      );
 
-      const botReply = response.data.response || "No response from AI";
-      setMessages((prevMessages) => [...prevMessages, { text: botReply, sender: "bot" }]);
+      console.log("Full Backend Response:", response.data);
+
+      const botReply = response.data?.response || response.data?.reply || "No response from AI";
+      setMessages((prev) => [...prev, { text: botReply.trim(), sender: "bot" }]);
     } catch (error) {
       console.error("Error fetching response:", error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
+      setMessages((prev) => [
+        ...prev,
         { text: "Failed to get response. Try again!", sender: "bot" },
       ]);
     } finally {
@@ -34,9 +39,9 @@ function App() {
 
   // Auto-scroll to latest message
   useEffect(() => {
-    setTimeout(() => {
+    if (messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    }
   }, [messages]);
 
   return (
@@ -58,6 +63,7 @@ function App() {
       >
         AI Chat Box
       </Text>
+
       <Box
         w={{ base: "90%", md: "400px" }}
         h={{ base: "70%", md: "500px" }}
@@ -69,11 +75,7 @@ function App() {
         overflowY="auto"
       >
         {messages.map((msg, index) => (
-          <HStack
-            key={index}
-            justify={msg.sender === "user" ? "flex-end" : "flex-start"}
-            mb={3}
-          >
+          <HStack key={index} justify={msg.sender === "user" ? "flex-end" : "flex-start"} mb={3}>
             <Box
               bg={msg.sender === "user" ? "blue.500" : "gray.200"}
               color={msg.sender === "user" ? "white" : "black"}
@@ -92,15 +94,7 @@ function App() {
 
         {loading && (
           <HStack justify="flex-start" mb={3}>
-            <Box
-              bg="gray.200"
-              color="black"
-              px={4}
-              py={2}
-              borderRadius="lg"
-              maxW="70%"
-              boxShadow="md"
-            >
+            <Box bg="gray.200" color="black" px={4} py={2} borderRadius="lg" maxW="70%" boxShadow="md">
               <Spinner size="sm" mr={2} /> <Text display="inline">AI is typing...</Text>
             </Box>
           </HStack>
@@ -118,16 +112,10 @@ function App() {
           boxShadow="sm"
           _placeholder={{ color: "gray.500" }}
           color="black"
-          onKeyDown={(e) => e.key === "Enter" && !loading && sendMessage()} // Prevent sending while loading
-          isDisabled={loading} // Disable input when AI is typing
+          onKeyDown={(e) => e.key === "Enter" && !loading && sendMessage()}
+          isDisabled={loading}
         />
-        <Button
-          onClick={sendMessage}
-          colorScheme="blue"
-          borderRadius="lg"
-          isDisabled={loading} // Disable button when AI is typing
-          boxShadow="md"
-        >
+        <Button onClick={sendMessage} colorScheme="blue" borderRadius="lg" isDisabled={loading} boxShadow="md">
           Send
         </Button>
       </HStack>
