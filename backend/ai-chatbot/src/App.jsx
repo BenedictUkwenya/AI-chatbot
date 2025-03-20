@@ -16,7 +16,7 @@ function App() {
     setLoading(true); // Show typing indicator
 
     try {
-      const response = await axios.post("http://localhost:5000/chat", { message: input }); // Ensure correct backend URL
+      const response = await axios.post("/chat", { message: input }); // Ensure correct backend URL
       console.log("Full Backend Response:", response.data); // Debugging
 
       const botReply = response.data.response || "No response from AI";
